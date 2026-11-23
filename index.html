@@ -54,6 +54,9 @@
   .card.crit { border-color: rgba(255,46,46,.65); box-shadow: 0 0 26px rgba(229,9,20,.35); }
   .crit-banner { margin-top:14px; border:1px solid rgba(255,46,46,.6); background:rgba(229,9,20,.16); color:#ffb3b3; font-size:13px; font-weight:700; text-align:center; padding:10px 12px; border-radius:12px; animation:pulse 1.6s ease-in-out infinite; }
   .barlbl { display:flex; justify-content:space-between; color:#8e8e99; font-size:11px; margin-top:6px; }
+  .calbtn { display:block; width:100%; margin-top:14px; padding:11px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.22); background:rgba(255,255,255,.06); color:#fff; font-size:13.5px; font-weight:700; cursor:pointer; transition: background .2s ease, border-color .2s ease; }
+  .calbtn:hover { background:rgba(229,9,20,.18); border-color:rgba(229,9,20,.6); }
+  .calbtn small { display:block; font-weight:400; font-size:11.5px; color:#b9b9c4; margin-top:2px; }
   footer { text-align:center; color:#77777f; font-size:12px; margin-top:30px; }
 </style>
 </head>
@@ -80,6 +83,57 @@
     var now = new Date(); var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     var p = iso.split("-"); var exp = new Date(+p[0], +p[1]-1, +p[2]);
     return Math.round((exp - today) / 86400000);
+  }
+  function addCal(label, expiry) {
+    var p = expiry.split("-");
+    var ymd = p[0] + p[1] + p[2];
+    var stamp = new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+    var ics = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Cek Status Netflix//Pengingat//ID",
+      "BEGIN:VTIMEZONE",
+      "TZID:Asia/Jakarta",
+      "BEGIN:STANDARD",
+      "DTSTART:19700101T000000",
+      "TZOFFSETFROM:+0700",
+      "TZOFFSETTO:+0700",
+      "TZNAME:WIB",
+      "END:STANDARD",
+      "END:VTIMEZONE",
+      "BEGIN:VEVENT",
+      "UID:netflix-" + label.replace(/\s+/g, "") + "-" + expiry + "@cek-status-netflix",
+      "DTSTAMP:" + stamp,
+      "DTSTART;TZID=Asia/Jakarta:" + ymd + "T090000",
+      "DTEND;TZID=Asia/Jakarta:" + ymd + "T093000",
+      "SUMMARY:⏰ Netflix " + label + " BERAKHIR hari ini — hubungi penjual untuk perpanjang",
+      "DESCRIPTION:Masa aktif slot Netflix " + label + " berakhir hari ini (" + fmtDate(expiry) + "). Segera hubungi penjual untuk perpanjang agar slot tidak mati.",
+      "BEGIN:VALARM",
+      "ACTION:DISPLAY",
+      "DESCRIPTION:Netflix " + label + " berakhir 3 hari lagi — hubungi penjual untuk perpanjang",
+      "TRIGGER:-P3D",
+      "END:VALARM",
+      "BEGIN:VALARM",
+      "ACTION:DISPLAY",
+      "DESCRIPTION:Netflix " + label + " berakhir BESOK — hubungi penjual untuk perpanjang",
+      "TRIGGER:-P1D",
+      "END:VALARM",
+      "BEGIN:VALARM",
+      "ACTION:DISPLAY",
+      "DESCRIPTION:Netflix " + label + " berakhir HARI INI",
+      "TRIGGER:PT0M",
+      "END:VALARM",
+      "END:VEVENT",
+      "END:VCALENDAR"
+    ].join("\r\n");
+    var blob = new Blob([ics], {type: "text/calendar;charset=utf-8"});
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "ingatkan-netflix-" + label.replace(/\s+/g, "-").toLowerCase() + ".ics";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+    return false;
   }
   function fmtDate(iso) {
     var bulan = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
@@ -115,6 +169,7 @@
         '<div class="count ' + state + '">' + countHtml + '</div>' +
         '<div class="bar ' + state + '"><i style="width:' + pct + '%"></i></div>' +
         '<div class="barlbl"><span>Sisa masa aktif</span><span>' + (d < 0 ? 0 : pct) + '%</span></div>' +
+        (live && d >= 0 ? '<button class="calbtn" onclick="return addCal(\'' + s.label + '\', \'' + s.expiry + '\')">🔔 Ingatkan Saya<small>alarm otomatis di HP kamu: 3 hari &amp; 1 hari sebelum berakhir</small></button>' : '') +
         (state === "crit" ? '<div class="crit-banner">⚠️ SISA ' + d + ' HARI — segera hubungi penjual untuk perpanjang sebelum slot mati</div>' : '') +
         (state === "dead" ? '<div class="crit-banner">⛔ SLOT SUDAH BERAKHIR — hubungi penjual untuk perpanjang</div>' : '');
       main.appendChild(card);
