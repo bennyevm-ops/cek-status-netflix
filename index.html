@@ -44,11 +44,15 @@
   .count .num { font-size:44px; font-weight:900; line-height:1; background: linear-gradient(180deg, #ffffff, #cfcfda); -webkit-background-clip:text; background-clip:text; color:transparent; }
   .count .lbl { color:#a7a7b3; font-size:12px; margin-top:5px; letter-spacing:.4px; }
   .count.warn .num { background: linear-gradient(180deg, #ffd98a, #ffb020); -webkit-background-clip:text; background-clip:text; }
+  .count.crit .num { background: linear-gradient(180deg, #ffb3b3, #ff2e2e); -webkit-background-clip:text; background-clip:text; }
   .count.dead .num { background: linear-gradient(180deg, #ff9a9a, #ff4d4d); -webkit-background-clip:text; background-clip:text; font-size:32px; }
   .bar { height:9px; border-radius:99px; background:rgba(255,255,255,.08); margin-top:14px; overflow:hidden; }
   .bar > i { display:block; height:100%; border-radius:99px; background: linear-gradient(90deg, #e50914, #ff7a45); transition: width 1s ease; }
   .bar.warn > i { background: linear-gradient(90deg, #ffb020, #ff7a45); }
+  .bar.crit > i { background: linear-gradient(90deg, #ff2e2e, #ff7a45); }
   .bar.dead > i { background:#ff4d4d; }
+  .card.crit { border-color: rgba(255,46,46,.65); box-shadow: 0 0 26px rgba(229,9,20,.35); }
+  .crit-banner { margin-top:14px; border:1px solid rgba(255,46,46,.6); background:rgba(229,9,20,.16); color:#ffb3b3; font-size:13px; font-weight:700; text-align:center; padding:10px 12px; border-radius:12px; animation:pulse 1.6s ease-in-out infinite; }
   .barlbl { display:flex; justify-content:space-between; color:#8e8e99; font-size:11px; margin-top:6px; }
   footer { text-align:center; color:#77777f; font-size:12px; margin-top:30px; }
 </style>
@@ -91,13 +95,13 @@
       if (live) aktif++;
       var d = daysLeft(s.expiry);
       if (nearest === null || d < nearest) { nearest = d; nearestLabel = s.label; }
-      var state = d < 0 ? "dead" : (d <= 7 ? "warn" : "");
+      var state = d < 0 ? "dead" : (d <= 3 ? "crit" : (d <= 7 ? "warn" : ""));
       var pct = Math.max(0, Math.min(100, Math.round(d / PERIOD * 100)));
       var countHtml = d < 0
         ? '<div class="num">EXPIRED</div><div class="lbl">sudah lewat ' + Math.abs(d) + ' hari</div>'
         : '<div class="num">' + d + '</div><div class="lbl">hari lagi menuju berakhir</div>';
       var card = document.createElement("section");
-      card.className = "card";
+      card.className = "card" + (state === "crit" || state === "dead" ? " crit" : "");
       card.style.animationDelay = (idx * 0.12) + "s";
       card.innerHTML =
         '<div class="row1"><span class="slot">' + s.label + '</span>' +
@@ -110,7 +114,9 @@
         '</div>' +
         '<div class="count ' + state + '">' + countHtml + '</div>' +
         '<div class="bar ' + state + '"><i style="width:' + pct + '%"></i></div>' +
-        '<div class="barlbl"><span>Sisa masa aktif</span><span>' + (d < 0 ? 0 : pct) + '%</span></div>';
+        '<div class="barlbl"><span>Sisa masa aktif</span><span>' + (d < 0 ? 0 : pct) + '%</span></div>' +
+        (state === "crit" ? '<div class="crit-banner">⚠️ SISA ' + d + ' HARI — segera hubungi penjual untuk perpanjang sebelum slot mati</div>' : '') +
+        (state === "dead" ? '<div class="crit-banner">⛔ SLOT SUDAH BERAKHIR — hubungi penjual untuk perpanjang</div>' : '');
       main.appendChild(card);
     });
     document.getElementById("summary").innerHTML =
